@@ -318,8 +318,11 @@ export class CarModel {
     // 1. Position & Orientation
     this.carGroup.position.x = physics.position.x;
     this.carGroup.position.z = physics.position.z;
-    // Follow track elevation smoothly
-    this.carGroup.position.y = trackPoint.elevationY + 0.15;
+    // Follow the continuous spline height. Damping removes the small
+    // frame-to-frame correction that is otherwise visible on crests.
+    const targetY = trackPoint.elevationY + 0.15;
+    const heightBlend = 1 - Math.exp(-dt * 12);
+    this.carGroup.position.y += (targetY - this.carGroup.position.y) * heightBlend;
 
     // Heading (Yaw)
     this.carGroup.rotation.y = physics.heading;

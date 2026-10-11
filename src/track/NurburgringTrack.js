@@ -591,7 +591,10 @@ export class NurburgringTrack {
    */
   generateTerrain() {
     const terrainSize = 4200;
-    const terrainSegments = 120;
+    // The road is only 11.5m wide; a coarse terrain grid lets triangles rise
+    // through the road on crests and compressions. Keep the terrain dense
+    // enough to preserve the carved safety corridor.
+    const terrainSegments = 240;
     const terrainGeom = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
     terrainGeom.rotateX(-Math.PI / 2);
 
@@ -653,10 +656,10 @@ export class NurburgringTrack {
           const blend = t * t * (3 - 2 * t);
           const naturalY = trackY - 1.5 + (hillBase * 0.25);
           y = (trackY - 2.4) * (1 - blend) + naturalY * blend;
-          // Absolute safety clamp within 60m of track
-          if (dist < 60) {
-            y = Math.min(y, trackY - 1.4);
-          }
+          // The whole run-off zone must remain below the road surface.
+          // A partial clamp still allows terrain triangles to cut through
+          // curbs when a vertex falls between the old thresholds.
+          y = Math.min(y, trackY - 1.8);
         } else {
           // Beyond 95m: blend up to regional mountain range
           const t = Math.min(1.0, (dist - 95) / 100);
@@ -860,6 +863,7 @@ export class NurburgringTrack {
    */
   getClosestTrackPoint(carPos) {
     let closest = this.sampledPoints[0];
+    let closestIndex = 0;
     let minDistSq = Infinity;
 
     // Fast search through sampled points
@@ -871,12 +875,44 @@ export class NurburgringTrack {
       if (distSq < minDistSq) {
         minDistSq = distSq;
         closest = sp;
+        closestIndex = i;
       }
     }
 
-    // Calculate lateral offset from centerline
-    const toCar = new THREE.Vector3(carPos.x - closest.position.x, 0, carPos.z - closest.position.z);
-    const lateralDist = toCar.dot(closest.normal);
+    // Project onto the two neighboring spline segments so the lookup
+    // parameter changes continuously instead of jumping between samples.
+    let closestU = closest.u;
+    for (const direction of [-1, 1]) {
+      const aIndex = (closestIndex + direction + this.sampleCount) % this.sampleCount;
+      const a = this.sampledPoints[aIndex].position;
+      const bIndex = (aIndex + direction + this.sampleCount) % this.sampleCount;
+      const b = this.sampledPoints[bIndex].position;
+      const abX = b.x - a.x;
+      const abZ = b.z - a.z;
+      const abLengthSq = abX * abX + abZ * abZ;
+      if (abLengthSq === 0) continue;
+      const projection = Math.max(0, Math.min(1,
+        ((carPos.x - a.x) * abX + (carPos.z - a.z) * abZ) / abLengthSq
+      ));
+      const pointX = a.x + abX * projection;
+      const pointZ = a.z + abZ * projection;
+      const segmentDistSq = (carPos.x - pointX) ** 2 + (carPos.z - pointZ) ** 2;
+      if (segmentDistSq <= minDistSq) {
+        closestU = (aIndex + direction * projection + this.sampleCount) % this.sampleCount / this.sampleCount;
+        minDistSq = segmentDistSq;
+      }
+    }
+
+    // Use the actual spline point for smooth elevation and orientation.
+    const continuousPoint = this.trackCurve.getPointAt(closestU);
+    const continuousTangent = this.trackCurve.getTangentAt(closestU).normalize();
+    const continuousNormal = new THREE.Vector3()
+      .crossVectors(continuousTangent, new THREE.Vector3(0, 1, 0))
+      .normalize();
+
+    // Calculate lateral offset from the continuous centerline
+    const toCar = new THREE.Vector3(carPos.x - continuousPoint.x, 0, carPos.z - continuousPoint.z);
+    const lateralDist = toCar.dot(continuousNormal);
     const isOffTrack = Math.abs(lateralDist) > (this.trackWidth * 0.5 + 2.0);
 
     // Current landmark name
@@ -889,11 +925,12 @@ export class NurburgringTrack {
     }
 
     return {
-      point: closest.position,
-      tangent: closest.tangent,
-      normal: closest.normal,
-      u: closest.u,
-      elevationY: closest.position.y,
+      point: continuousPoint,
+      tangent: continuousTangent,
+      normal: continuousNormal,
+      u: closestU,
+      elevationY: continuousPoint.y,
+      banking: closest.banking,
       lateralDist,
       isOffTrack,
       landmark: activeLandmark
