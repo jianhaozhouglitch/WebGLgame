@@ -314,6 +314,8 @@ export class NurburgringTrack {
     const curbRightGeom = new THREE.BufferGeometry();
     const barrierLeftGeom = new THREE.BufferGeometry();
     const barrierRightGeom = new THREE.BufferGeometry();
+    const vergeLeftGeom = new THREE.BufferGeometry();
+    const vergeRightGeom = new THREE.BufferGeometry();
 
     const roadPositions = [];
     const roadUvs = [];
@@ -331,6 +333,13 @@ export class NurburgringTrack {
     const blIndices = [];
     const brPositions = [];
     const brIndices = [];
+
+    const vlPositions = [];
+    const vlUvs = [];
+    const vlIndices = [];
+    const vrPositions = [];
+    const vrUvs = [];
+    const vrIndices = [];
 
     const n = this.sampleCount;
 
@@ -394,6 +403,20 @@ export class NurburgringTrack {
       brPositions.push(bRightBase.x, bRightBase.y, bRightBase.z);
       brPositions.push(bRightTop.x, bRightTop.y, bRightTop.z);
 
+      // Grass Verge Embankments (22m buffer extending outward from barrier bases, sloping downwards)
+      const vergeW = 22.0;
+      const vlOuter = new THREE.Vector3(p.x - normal.x * (barrierOffset + vergeW), p.y - 1.6, p.z - normal.z * (barrierOffset + vergeW));
+      vlPositions.push(bLeftBase.x, bLeftBase.y, bLeftBase.z);
+      vlPositions.push(vlOuter.x, vlOuter.y, vlOuter.z);
+      vlUvs.push(0, vCoord * 12);
+      vlUvs.push(1, vCoord * 12);
+
+      const vrOuter = new THREE.Vector3(p.x + normal.x * (barrierOffset + vergeW), p.y - 1.6, p.z + normal.z * (barrierOffset + vergeW));
+      vrPositions.push(bRightBase.x, bRightBase.y, bRightBase.z);
+      vrPositions.push(vrOuter.x, vrOuter.y, vrOuter.z);
+      vrUvs.push(0, vCoord * 12);
+      vrUvs.push(1, vCoord * 12);
+
       // Face indices
       if (i < n - 1) {
         const i0 = i * 2;
@@ -418,6 +441,13 @@ export class NurburgringTrack {
 
         brIndices.push(i0, i1, i2);
         brIndices.push(i1, i3, i2);
+
+        // Verge faces
+        vlIndices.push(i0, i1, i2);
+        vlIndices.push(i1, i3, i2);
+
+        vrIndices.push(i0, i1, i2);
+        vrIndices.push(i1, i3, i2);
       } else {
         // Connect loop back to start
         const i0 = i * 2;
@@ -439,6 +469,12 @@ export class NurburgringTrack {
 
         brIndices.push(i0, i1, i2);
         brIndices.push(i1, i3, i2);
+
+        vlIndices.push(i0, i1, i2);
+        vlIndices.push(i1, i3, i2);
+
+        vrIndices.push(i0, i1, i2);
+        vrIndices.push(i1, i3, i2);
       }
     }
 
@@ -500,32 +536,32 @@ export class NurburgringTrack {
     const barrierRightMesh = new THREE.Mesh(barrierRightGeom, barrierMat);
     this.scene.add(barrierRightMesh);
     this.barrierMeshes.push(barrierRightMesh);
+
+    // Grass Embankment Verges
+    const grassTex = this.createPixelGrassTexture();
+    const vergeMat = new THREE.MeshLambertMaterial({ map: grassTex });
+
+    vergeLeftGeom.setAttribute('position', new THREE.Float32BufferAttribute(vlPositions, 3));
+    vergeLeftGeom.setAttribute('uv', new THREE.Float32BufferAttribute(vlUvs, 2));
+    vergeLeftGeom.setIndex(vlIndices);
+    vergeLeftGeom.computeVertexNormals();
+    const vergeLeftMesh = new THREE.Mesh(vergeLeftGeom, vergeMat);
+    vergeLeftMesh.receiveShadow = true;
+    this.scene.add(vergeLeftMesh);
+
+    vergeRightGeom.setAttribute('position', new THREE.Float32BufferAttribute(vrPositions, 3));
+    vergeRightGeom.setAttribute('uv', new THREE.Float32BufferAttribute(vrUvs, 2));
+    vergeRightGeom.setIndex(vrIndices);
+    vergeRightGeom.computeVertexNormals();
+    const vergeRightMesh = new THREE.Mesh(vergeRightGeom, vergeMat);
+    vergeRightMesh.receiveShadow = true;
+    this.scene.add(vergeRightMesh);
   }
 
   /**
-   * Rolling Eifel Mountain Grass Terrain
+   * Procedural Pixel Grass Texture
    */
-  generateTerrain() {
-    const terrainSize = 4200;
-    const terrainSegments = 120;
-    const terrainGeom = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
-    terrainGeom.rotateX(-Math.PI / 2);
-
-    const pos = terrainGeom.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const vx = pos.getX(i);
-      const vz = pos.getZ(i);
-
-      // Low poly rolling hills
-      const hill1 = Math.sin(vx * 0.002) * Math.cos(vz * 0.002) * 55;
-      const hill2 = Math.sin(vx * 0.005 + 1.2) * Math.sin(vz * 0.005) * 25;
-      const y = hill1 + hill2 - 15;
-
-      pos.setY(i, y);
-    }
-    terrainGeom.computeVertexNormals();
-
-    // Pixel grass canvas texture
+  createPixelGrassTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -543,15 +579,108 @@ export class NurburgringTrack {
     const grassTex = new THREE.CanvasTexture(canvas);
     grassTex.wrapS = THREE.RepeatWrapping;
     grassTex.wrapT = THREE.RepeatWrapping;
-    grassTex.repeat.set(200, 200);
+    grassTex.repeat.set(120, 120);
     grassTex.magFilter = THREE.NearestFilter;
     grassTex.minFilter = THREE.NearestFilter;
+    return grassTex;
+  }
+
+  /**
+   * Rolling Eifel Mountain Grass Terrain with Track Heightmap Carving
+   * Ensures terrain NEVER clips into the road, curbs, or barriers!
+   */
+  generateTerrain() {
+    const terrainSize = 4200;
+    const terrainSegments = 120;
+    const terrainGeom = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
+    terrainGeom.rotateX(-Math.PI / 2);
+
+    const pos = terrainGeom.attributes.position;
+    const sampleCount = this.sampledPoints.length;
+
+    // Spatial acceleration grid for lightning-fast closest point queries
+    const cellSize = 80;
+    const grid = new Map();
+    for (let k = 0; k < sampleCount; k++) {
+      const pt = this.sampledPoints[k];
+      const gx = Math.floor(pt.position.x / cellSize);
+      const gz = Math.floor(pt.position.z / cellSize);
+      const key = `${gx},${gz}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(pt);
+    }
+
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      const vz = pos.getZ(i);
+
+      // Fast nearest track point lookup
+      const gx = Math.floor(vx / cellSize);
+      const gz = Math.floor(vz / cellSize);
+      let minDistSq = Infinity;
+      let closestPt = null;
+
+      for (let dx = -3; dx <= 3; dx++) {
+        for (let dz = -3; dz <= 3; dz++) {
+          const list = grid.get(`${gx + dx},${gz + dz}`);
+          if (list) {
+            for (let c = 0; c < list.length; c++) {
+              const sp = list[c];
+              const d2 = (sp.position.x - vx) * (sp.position.x - vx) + (sp.position.z - vz) * (sp.position.z - vz);
+              if (d2 < minDistSq) {
+                minDistSq = d2;
+                closestPt = sp;
+              }
+            }
+          }
+        }
+      }
+
+      // Base rolling hills for distant scenery
+      const hillBase = Math.sin(vx * 0.002) * Math.cos(vz * 0.002) * 45 + Math.sin(vx * 0.005 + 1.2) * 20;
+
+      let y;
+      if (closestPt && minDistSq < 240 * 240) {
+        const dist = Math.sqrt(minDistSq);
+        const trackY = closestPt.position.y;
+
+        if (dist < 26) {
+          // Inside track corridor: strictly under road level (no clipping possible!)
+          y = trackY - 2.4;
+        } else if (dist < 95) {
+          // Embankment transition: blend smoothly from road level into regional hills
+          const t = (dist - 26) / (95 - 26);
+          const blend = t * t * (3 - 2 * t);
+          const naturalY = trackY - 1.5 + (hillBase * 0.25);
+          y = (trackY - 2.4) * (1 - blend) + naturalY * blend;
+          // Absolute safety clamp within 60m of track
+          if (dist < 60) {
+            y = Math.min(y, trackY - 1.4);
+          }
+        } else {
+          // Beyond 95m: blend up to regional mountain range
+          const t = Math.min(1.0, (dist - 95) / 100);
+          const blend = t * t * (3 - 2 * t);
+          const nearHill = trackY - 1.2 + (hillBase * 0.4);
+          y = nearHill * (1 - blend) + (hillBase - 15) * blend;
+        }
+      } else {
+        // Distant background mountains
+        y = hillBase - 15;
+      }
+
+      pos.setY(i, y);
+    }
+    terrainGeom.computeVertexNormals();
+
+    const grassTex = this.createPixelGrassTexture();
+    grassTex.repeat.set(200, 200);
 
     const terrainMat = new THREE.MeshLambertMaterial({
       map: grassTex
     });
     const terrainMesh = new THREE.Mesh(terrainGeom, terrainMat);
-    terrainMesh.position.y = -1.5;
+    terrainMesh.position.y = -0.5;
     terrainMesh.receiveShadow = true;
     this.scene.add(terrainMesh);
   }

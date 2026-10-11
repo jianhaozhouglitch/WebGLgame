@@ -53,7 +53,7 @@ export class CarPhysics {
     this.lateralSpeed = 0; // m/s (drift sideways speed)
     this.angularVelocity = 0; // rad/s
     this.steeringAngle = 0; // current wheel turn angle
-    this.maxSteerAngle = 0.55; // ~31.5 degrees
+    this.maxSteerAngle = 0.24; // ~13.8 degrees (smooth GT racing steering lock)
 
     // Dynamic Accelerations (for G-meter)
     this.longitudinalG = 0;
@@ -178,13 +178,13 @@ export class CarPhysics {
       }
     }
 
-    // 1. Steering Geometry with Speed Sensitivity
-    // At high speeds, lower steering lock prevents violent destabilization
+    // 1. Steering Geometry with Speed Sensitivity & Stability
+    // At high speeds, lower steering lock prevents sudden violent destabilization
     const speedKmh = Math.abs(this.speed) * 3.6;
-    const speedFactor = Math.max(0.2, 1.0 - (speedKmh / 320) * 0.7);
+    const speedFactor = Math.max(0.16, 1.0 / (1.0 + (speedKmh / 50.0) * 0.95));
     const targetSteerAngle = this.steerInput * this.maxSteerAngle * speedFactor;
-    // Smooth steering rack movement
-    const steerSpeed = 12.0;
+    // Smooth steering rack: smooth response on input, snappy return to center
+    const steerSpeed = (this.steerInput === 0) ? 14.0 : 6.5;
     this.steeringAngle += (targetSteerAngle - this.steeringAngle) * Math.min(1.0, dt * steerSpeed);
 
     // 2. Drivetrain & Engine RPM Coupling
@@ -288,23 +288,27 @@ export class CarPhysics {
     }
 
     // Oversteer & Drift Dynamics:
-    // If handbrake or high lateral G, amplify yaw rotation and induce side slide
-    if (this.isHandbrakeActive || (slipSpeed > 2.2 && Math.abs(this.steeringAngle) > 0.08)) {
+    // Only amplify yaw into drift when intentional: Shift key pressed or severe power-oversteer
+    const isDriftIntentional = this.isHandbrakeActive || (slipSpeed > 6.0 && Math.abs(this.steeringAngle) > 0.1 && this.throttle > 0.75);
+
+    if (isDriftIntentional) {
       this.isDrifting = true;
-      const driftBoost = this.isHandbrakeActive ? 1.6 : 1.1;
-      this.angularVelocity += targetAngularVelocity * dt * 4.0 * driftBoost;
-      this.angularVelocity *= 0.94; // Rotational damping
+      const driftBoost = this.isHandbrakeActive ? 1.5 : 1.1;
+      this.angularVelocity += targetAngularVelocity * dt * 2.5 * driftBoost;
+      this.angularVelocity *= 0.93; // Rotational damping
 
       // Side slide increases
-      const centripetalSlide = -this.angularVelocity * this.speed * 0.4;
+      const centripetalSlide = -this.angularVelocity * this.speed * 0.35;
       this.lateralSpeed += (centripetalSlide - this.lateralSpeed * 3.5 * tireGrip) * dt;
-      this.tireSmokeIntensity = Math.min(1.0, (slipSpeed / 8.0) + (this.isHandbrakeActive ? 0.7 : 0.0));
+      this.tireSmokeIntensity = Math.min(1.0, (slipSpeed / 7.0) + (this.isHandbrakeActive ? 0.7 : 0.0));
     } else {
       this.isDrifting = false;
-      this.angularVelocity += (targetAngularVelocity - this.angularVelocity) * Math.min(1.0, dt * 10.0);
+      // High tracking stability during regular cornering (prevents spinning out!)
+      this.angularVelocity += (targetAngularVelocity - this.angularVelocity) * Math.min(1.0, dt * 14.0);
+      this.angularVelocity *= 0.94; // Gyroscopic directional damping
       // Lateral friction restores grip quickly
-      this.lateralSpeed += (-this.lateralSpeed * 12.0) * dt;
-      this.tireSmokeIntensity = Math.max(0, this.tireSmokeIntensity - dt * 3.0);
+      this.lateralSpeed += (-this.lateralSpeed * 16.0) * dt;
+      this.tireSmokeIntensity = Math.max(0, this.tireSmokeIntensity - dt * 4.0);
     }
 
     // Apply Yaw
