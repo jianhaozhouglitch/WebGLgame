@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nürburgring Pixel 3D - 纽伯格林像素赛车</title>
+    <!-- Retro & Arcade Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <!-- 3D WebGL Canvas -->
+      <canvas id="webgl-canvas"></canvas>
+
+      <!-- Retro CRT / Pixel scanline overlay (Toggleable) -->
+      <div id="scanline-overlay" class="scanlines active"></div>
+
+      <!-- Arcade Retro HUD Overlay -->
+      <div id="hud-container">
+        <!-- Top Bar: Circuit Info & Sector / Lap Timing -->
+        <header class="hud-top">
+          <div class="hud-circuit-card">
+            <div class="circuit-title">NÜRBURGRING NORDSCHLEIFE</div>
+            <div class="circuit-subtitle">纽伯格林北环 · 绿色地狱 20.8 KM</div>
+          </div>
+
+          <div class="hud-timing-card">
+            <div class="timing-row">
+              <span class="label">LAP TIME</span>
+              <span id="current-lap-time" class="time-value">00:00.000</span>
+            </div>
+            <div class="timing-row small">
+              <span class="label">BEST LAP</span>
+              <span id="best-lap-time" class="time-value best">--:--.---</span>
+            </div>
+            <div class="timing-row small">
+              <span class="label">SECTOR</span>
+              <span id="sector-display" class="sector-value">S1 / 12</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Center Notification & Drift Alerts -->
+        <div id="center-alerts">
+          <div id="drift-score-box" class="hidden">
+            <div class="drift-badge">DRIFT!</div>
+            <div id="drift-points" class="drift-number">+0 PTS</div>
+            <div id="drift-angle" class="drift-sub">SLIP ANGLE 35°</div>
+          </div>
+          <div id="shift-alert" class="shift-hint hidden">SHIFT UP! ▲</div>
+          <div id="rev-limit-alert" class="rev-limit-hint hidden">REV LIMIT! ⚠️</div>
+          <div id="lap-completed-alert" class="lap-banner hidden">LAP COMPLETED!</div>
+        </div>
+
+        <!-- Left Widget: Mini-Map & Sector Radar -->
+        <div class="hud-left">
+          <div class="minimap-panel">
+            <div class="panel-header">TRACK MAP</div>
+            <div class="minimap-wrapper">
+              <canvas id="minimap-canvas" width="220" height="220"></canvas>
+            </div>
+            <div class="location-name" id="track-location-name">START / FINISH LINE</div>
+          </div>
+
+          <!-- G-Force & Drift Angle Radar -->
+          <div class="telemetry-panel">
+            <div class="panel-header">G-METER</div>
+            <div class="g-meter-box">
+              <div class="g-crosshair"></div>
+              <div id="g-ball" class="g-ball"></div>
+            </div>
+            <div class="telemetry-stats">
+              <div>LAT G: <span id="lat-g-val">0.00</span></div>
+              <div>LONG G: <span id="long-g-val">0.00</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right / Bottom Widget: Instrument Cluster (Tachometer & Gear) -->
+        <div class="hud-bottom-right">
+          <!-- Shift Lights / RPM LEDs -->
+          <div class="shift-lights-bar" id="shift-lights">
+            <span class="led green"></span>
+            <span class="led green"></span>
+            <span class="led green"></span>
+            <span class="led yellow"></span>
+            <span class="led yellow"></span>
+            <span class="led yellow"></span>
+            <span class="led red"></span>
+            <span class="led red"></span>
+            <span class="led red blink"></span>
+          </div>
+
+          <div class="gauge-cluster">
+            <!-- Gear Display (BIG RETRO PIXEL NUMBER) -->
+            <div class="gear-container">
+              <div class="gear-label">GEAR 档位</div>
+              <div id="gear-display" class="gear-number">1</div>
+              <div class="gear-hint">▲/▼ 换挡</div>
+            </div>
+
+            <!-- Speedometer & Tachometer -->
+            <div class="speed-rpm-container">
+              <!-- Digital Speed -->
+              <div class="speed-box">
+                <span id="speed-display" class="speed-number">0</span>
+                <span class="speed-unit">KM/H</span>
+              </div>
+
+              <!-- RPM Arc Gauge Canvas -->
+              <div class="rpm-gauge-wrapper">
+                <canvas id="rpm-canvas" width="200" height="120"></canvas>
+                <div class="rpm-text-row">
+                  <span class="rpm-label">RPM ×1000</span>
+                  <span id="rpm-digital" class="rpm-val">900</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pedals & Boost Input Bars -->
+          <div class="pedal-bars">
+            <div class="bar-group">
+              <span class="bar-tag">THROTTLE (W)</span>
+              <div class="bar-bg"><div id="throttle-bar" class="bar-fill throttle"></div></div>
+            </div>
+            <div class="bar-group">
+              <span class="bar-tag">BRAKE (S)</span>
+              <div class="bar-bg"><div id="brake-bar" class="bar-fill brake"></div></div>
+            </div>
+            <div class="bar-group">
+              <span class="bar-tag">HANDBRAKE (SHIFT)</span>
+              <div class="bar-bg"><div id="drift-bar" class="bar-fill drift"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Left: Control Cheatsheet & Action Buttons -->
+        <footer class="hud-bottom-left">
+          <div class="keybinds-badge">
+            <div class="key-item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>油门/刹车/转向</span></div>
+            <div class="key-item"><kbd>SHIFT</kbd><span>漂移 / 手刹</span></div>
+            <div class="key-item"><kbd>↑</kbd><kbd>↓</kbd><span>升档 / 降档 (换挡)</span></div>
+            <div class="key-item"><kbd>C</kbd><span>视角切换</span></div>
+            <div class="key-item"><kbd>R</kbd><span>重置赛车</span></div>
+          </div>
+
+          <div class="hud-action-buttons">
+            <button id="btn-audio-toggle" class="btn-retro" title="开关音效">🔊 音效: 开</button>
+            <button id="btn-camera-toggle" class="btn-retro" title="切换视角">🎥 视角 [C]</button>
+            <button id="btn-settings-toggle" class="btn-retro" title="游戏设置">⚙️ 设置</button>
+          </div>
+        </footer>
+      </div>
+
+      <!-- Settings / Help Modal -->
+      <div id="settings-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h2>⚙️ 游戏设置 & 驾驶指南</h2>
+            <button id="btn-close-settings" class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="setting-item">
+              <label for="pixel-scale-select">像素风格分辨率 (Pixel Scale):</label>
+              <select id="pixel-scale-select" class="retro-select">
+                <option value="2">极客像素 2x (360p 怀旧街机)</option>
+                <option value="1.5" selected>经典像素 1.5x (平衡画质)</option>
+                <option value="1">高清原生 1x (高精低多边形)</option>
+                <option value="3">复古粗糙 3x (8-Bit 像素感)</option>
+              </select>
+            </div>
+
+            <div class="setting-item">
+              <label for="transmission-select">变速箱模式 (Transmission):</label>
+              <select id="transmission-select" class="retro-select">
+                <option value="manual" selected>纯手动挡 (↑升档 / ↓降档) [推荐]</option>
+                <option value="auto">半自动挡 (自动换挡 / 手动可干预)</option>
+              </select>
+            </div>
+
+            <div class="setting-item">
+              <label>CRT 扫描线光栅滤镜 (Scanlines):</label>
+              <button id="btn-toggle-scanlines" class="btn-retro active">开 (ON)</button>
+            </div>
+
+            <div class="setting-item">
+              <label>音效音量 (Sound Volume):</label>
+              <input type="range" id="sound-volume-slider" min="0" max="100" value="80" class="retro-range" />
+            </div>
+
+            <div class="guide-box">
+              <h3>🏁 纽伯格林真车加速 & 漂移技巧：</h3>
+              <ul>
+                <li><strong>真实加速度动力学：</strong> 1挡起步齿比高达 3.82，扭矩爆发极强！当转速达到 <strong>7000~8000 RPM</strong> 红线时，发动机扭矩回落并触发断油保护，此时请立即按 <kbd>↑</kbd> 升入更高档位以保持最大加速度！</li>
+                <li><strong>降档补油与发动机制动：</strong> 进弯前按 <kbd>S</kbd> 减速并按 <kbd>↓</kbd> 降档，变速箱会自动补油匹配转速，并利用发动机制动稳健入弯。</li>
+                <li><strong>极限漂移过弯：</strong> 进弯前打方向盘 <kbd>A/D</kbd>，按下 <kbd>SHIFT</kbd> 迅速打破后轮抓地力，车辆甩尾起漂！反打方向盘控车，配合油门即可持续滑动并累积高额漂移得分！</li>
+                <li><strong>征服旋转木马弯 (Caracciola Karussell)：</strong> 在赛道标志性倾角水泥内侧压弯，贴紧路肩享受极致下压力！</li>
+              </ul>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btn-save-settings" class="btn-retro primary">确认并继续驾驶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Overlay / Audio Activation -->
+      <div id="start-overlay" class="start-overlay">
+        <div class="start-card">
+          <div class="game-logo">
+            <div class="logo-top">NÜRBURGRING</div>
+            <div class="logo-sub">PIXEL RACING 3D</div>
+          </div>
+          <div class="logo-desc">纽伯格林北环 3D 像素赛车 · 真实动力学加速度引擎</div>
+          
+          <div class="controls-preview">
+            <div class="preview-row"><span>油门 / 刹车:</span> <kbd>W</kbd> / <kbd>S</kbd></div>
+            <div class="preview-row"><span>转向控制:</span> <kbd>A</kbd> / <kbd>D</kbd></div>
+            <div class="preview-row"><span>手刹漂移:</span> <kbd>SHIFT</kbd></div>
+            <div class="preview-row"><span>手动换挡:</span> <kbd>↑ 升档</kbd> / <kbd>↓ 降档</kbd></div>
+          </div>
+
+          <button id="btn-start-game" class="btn-start">
+            <span class="btn-pulse"></span>
+            PRESS TO START / 点此发车
+          </button>
+          <div class="start-hint">按任意键或点击按钮点火启动引擎</div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
