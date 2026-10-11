@@ -68,94 +68,48 @@ export class NurburgringTrack {
     // 3D coordinates (X, Y (Elevation), Z) scaled for optimal racing scale
     // Real Nordschleife drops ~300m in elevation down to Breidscheid then climbs back to Hohe Acht!
     const scale = 1.35;
+    // Plan-view layout follows the supplied Nordschleife map: start/finish
+    // sits at the bottom, the long Döttinger Höhe runs diagonally back from
+    // Galgenkopf, and the northern loop contains Breidscheid and Bergwerk.
     const rawPoints = [
-      // 0: Start / Finish Line & T13 Straight
-      new THREE.Vector3(0, 40, -100),
-      new THREE.Vector3(20, 38, -250),
-      // Hatzenbach
-      new THREE.Vector3(80, 36, -380),
-      new THREE.Vector3(140, 34, -460),
-      new THREE.Vector3(180, 32, -580),
-      // Hocheichen
-      new THREE.Vector3(150, 30, -680),
-      new THREE.Vector3(100, 32, -780),
-      // Flugplatz (High speed crest)
-      new THREE.Vector3(40, 42, -900),
-      new THREE.Vector3(-30, 44, -1050),
-      // Schwedenkreuz (Sweeper)
-      new THREE.Vector3(-120, 42, -1220),
-      new THREE.Vector3(-240, 38, -1380),
-      // Aremberg
-      new THREE.Vector3(-380, 32, -1500),
-      new THREE.Vector3(-520, 25, -1540),
-      // Fuchsröhre (Steep downhill drop into compression!)
-      new THREE.Vector3(-660, 5, -1500),
-      new THREE.Vector3(-780, -15, -1400),
-      new THREE.Vector3(-880, -25, -1260),
-      // Adenauer Forst (chicane)
-      new THREE.Vector3(-940, -20, -1100),
-      new THREE.Vector3(-1020, -15, -1020),
-      new THREE.Vector3(-1060, -12, -900),
-      // Metzgesfeld
-      new THREE.Vector3(-1080, -15, -740),
-      new THREE.Vector3(-1120, -20, -580),
-      // Kallenhard
-      new THREE.Vector3(-1180, -28, -420),
-      // Wehrseifen (Hairpin right)
-      new THREE.Vector3(-1260, -40, -260),
-      new THREE.Vector3(-1320, -55, -120),
-      // Breidscheid (Lowest elevation point of the Nordschleife!)
-      new THREE.Vector3(-1360, -70, 40),
-      new THREE.Vector3(-1340, -68, 180),
-      // Ex-Mühle
-      new THREE.Vector3(-1260, -55, 300),
-      new THREE.Vector3(-1160, -42, 380),
-      // Bergwerk (Critical corner)
-      new THREE.Vector3(-1040, -30, 420),
-      new THREE.Vector3(-900, -15, 430),
-      // Kesselchen (Long winding uphill climb)
-      new THREE.Vector3(-740, 5, 410),
-      new THREE.Vector3(-580, 25, 380),
-      new THREE.Vector3(-440, 45, 340),
-      // Klostertal
-      new THREE.Vector3(-320, 60, 300),
-      new THREE.Vector3(-200, 72, 260),
-      // Steilstrecke
-      new THREE.Vector3(-100, 80, 220),
-      // Caracciola Karussell (Famous banked concrete turn!)
-      new THREE.Vector3(-10, 84, 180),
-      new THREE.Vector3(70, 83, 150),
-      new THREE.Vector3(120, 80, 190),
-      // Hohe Acht (Highest elevation summit)
-      new THREE.Vector3(150, 92, 280),
-      new THREE.Vector3(170, 95, 400),
-      // Wippermann & Eschbach
-      new THREE.Vector3(160, 85, 540),
-      new THREE.Vector3(130, 75, 680),
-      // Brünnchen (Famous corner)
-      new THREE.Vector3(80, 65, 820),
-      new THREE.Vector3(20, 55, 940),
-      // Eiskurve
-      new THREE.Vector3(-40, 48, 1060),
-      // Pflanzgarten (Jumps)
-      new THREE.Vector3(-80, 42, 1200),
-      new THREE.Vector3(-60, 38, 1340),
-      new THREE.Vector3(0, 35, 1460),
-      // Schwalbenschwanz & Kleines Karussell
-      new THREE.Vector3(80, 32, 1540),
-      new THREE.Vector3(160, 30, 1560),
-      new THREE.Vector3(220, 28, 1480),
-      // Galgenkopf
-      new THREE.Vector3(250, 26, 1340),
-      new THREE.Vector3(240, 25, 1180),
-      // Döttinger Höhe (Massive long high-speed straight ~2.5km!)
-      new THREE.Vector3(210, 25, 960),
-      new THREE.Vector3(180, 26, 680),
-      new THREE.Vector3(140, 28, 400),
-      new THREE.Vector3(100, 30, 150),
-      new THREE.Vector3(60, 34, -10),
-      // Antoniusbuche & Tiergarten chicane back to Start line
-      new THREE.Vector3(20, 38, -60)
+      // Start / finish and Hatzenbach: the real lap leaves the bottom of
+      // the map and immediately bends into the compact opening section.
+      new THREE.Vector3(0, 40, 0),
+      new THREE.Vector3(-95, 38, -20),
+      new THREE.Vector3(-180, 35, -85),
+      new THREE.Vector3(-245, 38, -190), // Hocheichen
+      new THREE.Vector3(-330, 48, -330), // Flugplatz
+      new THREE.Vector3(-360, 43, -490), // Schwedenkreuz
+      new THREE.Vector3(-420, 34, -630), // Aremberg
+      new THREE.Vector3(-350, 18, -760), // Fuchsröhre
+      new THREE.Vector3(-470, 8, -850), // Adenauer Forst
+      new THREE.Vector3(-625, 5, -880), // Metzgesfeld
+      new THREE.Vector3(-770, -5, -805), // Kallenhard
+      new THREE.Vector3(-735, -18, -665), // Wehrseifen
+      new THREE.Vector3(-590, -35, -600), // Breidscheid low point
+      new THREE.Vector3(-470, -25, -515), // Ex-Mühle
+      new THREE.Vector3(-455, -5, -360), // Bergwerk
+      new THREE.Vector3(-310, 15, -285), // Kesselchen
+      new THREE.Vector3(-120, 32, -300),
+      new THREE.Vector3(55, 48, -285), // Klostertal / Steilstrecke
+      new THREE.Vector3(170, 62, -245),
+      new THREE.Vector3(115, 60, -155), // Caracciola Karussell
+      new THREE.Vector3(230, 68, -120),
+      new THREE.Vector3(345, 82, -160), // Hohe Acht
+      new THREE.Vector3(455, 76, -80), // Wippermann
+      new THREE.Vector3(505, 65, 65), // Brünnchen
+      new THREE.Vector3(475, 55, 205), // Eiskurve
+      new THREE.Vector3(385, 45, 320), // Pflanzgarten
+      new THREE.Vector3(255, 35, 365), // Sprunghügel
+      new THREE.Vector3(145, 28, 315), // Schwalbenschwanz
+      new THREE.Vector3(90, 25, 390), // Kleines Karussell
+      new THREE.Vector3(185, 24, 485), // Galgenkopf
+      // Döttinger Höhe is the long diagonal return leg shown in the map.
+      new THREE.Vector3(355, 26, 610),
+      new THREE.Vector3(515, 30, 730),
+      new THREE.Vector3(400, 33, 825), // Antoniusbuche
+      new THREE.Vector3(205, 36, 715), // Tiergarten
+      new THREE.Vector3(70, 40, 520)
     ];
 
     // Scale points
@@ -174,9 +128,9 @@ export class NurburgringTrack {
       const up = new THREE.Vector3(0, 1, 0);
       const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
 
-      // Check if inside Karussell region (around t = 0.63)
+      // Check if inside the Caracciola Karussell region (around t = 0.63)
       let banking = 0;
-      if (Math.abs(u - 0.63) < 0.02) {
+      if (Math.abs(u - 0.63) < 0.025) {
         banking = 0.22; // ~12 degrees banking in Karussell!
       }
 
@@ -201,21 +155,21 @@ export class NurburgringTrack {
     const ctx = canvas.getContext('2d');
 
     // Dark grey pixel asphalt
-    ctx.fillStyle = '#22262c';
+    ctx.fillStyle = '#3d444d';
     ctx.fillRect(0, 0, 256, 256);
 
     // Pixel noise grain
     for (let x = 0; x < 256; x += 4) {
       for (let y = 0; y < 256; y += 4) {
         if (Math.random() > 0.6) {
-          ctx.fillStyle = Math.random() > 0.5 ? '#1a1d22' : '#2b3038';
+          ctx.fillStyle = Math.random() > 0.5 ? '#303740' : '#515b65';
           ctx.fillRect(x, y, 4, 4);
         }
       }
     }
 
     // Racing rubber tire groove marks (racing line)
-    ctx.fillStyle = '#17191d';
+    ctx.fillStyle = '#292f36';
     ctx.fillRect(50, 0, 36, 256);
     ctx.fillRect(170, 0, 36, 256);
 
@@ -566,12 +520,12 @@ export class NurburgringTrack {
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#2d5a27'; // Dark forest green
+    ctx.fillStyle = '#4f8a3d'; // Sunlit forest green
     ctx.fillRect(0, 0, 64, 64);
     for (let x = 0; x < 64; x += 4) {
       for (let y = 0; y < 64; y += 4) {
         if (Math.random() > 0.5) {
-          ctx.fillStyle = Math.random() > 0.5 ? '#244820' : '#396d30';
+          ctx.fillStyle = Math.random() > 0.5 ? '#3c7130' : '#69a64d';
           ctx.fillRect(x, y, 4, 4);
         }
       }
@@ -594,7 +548,7 @@ export class NurburgringTrack {
     // The road is only 11.5m wide; a coarse terrain grid lets triangles rise
     // through the road on crests and compressions. Keep the terrain dense
     // enough to preserve the carved safety corridor.
-    const terrainSegments = 240;
+    const terrainSegments = 300;
     const terrainGeom = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
     terrainGeom.rotateX(-Math.PI / 2);
 
@@ -647,22 +601,24 @@ export class NurburgringTrack {
         const dist = Math.sqrt(minDistSq);
         const trackY = closestPt.position.y;
 
-        if (dist < 26) {
-          // Inside track corridor: strictly under road level (no clipping possible!)
-          y = trackY - 2.4;
-        } else if (dist < 95) {
-          // Embankment transition: blend smoothly from road level into regional hills
-          const t = (dist - 26) / (95 - 26);
+        if (dist < 46) {
+          // Keep a deep continuous trench below the complete road and curb.
+          // This prevents terrain triangles from crossing the ribbon between
+          // adjacent terrain vertices on steep elevation changes.
+          y = trackY - 7.0;
+        } else if (dist < 115) {
+          // Embankment transition: blend smoothly from the trench into hills
+          const t = (dist - 46) / (115 - 46);
           const blend = t * t * (3 - 2 * t);
           const naturalY = trackY - 1.5 + (hillBase * 0.25);
-          y = (trackY - 2.4) * (1 - blend) + naturalY * blend;
+          y = (trackY - 7.0) * (1 - blend) + naturalY * blend;
           // The whole run-off zone must remain below the road surface.
           // A partial clamp still allows terrain triangles to cut through
           // curbs when a vertex falls between the old thresholds.
-          y = Math.min(y, trackY - 1.8);
+          y = Math.min(y, trackY - 4.2);
         } else {
-          // Beyond 95m: blend up to regional mountain range
-          const t = Math.min(1.0, (dist - 95) / 100);
+          // Beyond the run-off zone: blend up to the regional mountain range
+          const t = Math.min(1.0, (dist - 115) / 100);
           const blend = t * t * (3 - 2 * t);
           const nearHill = trackY - 1.2 + (hillBase * 0.4);
           y = nearHill * (1 - blend) + (hillBase - 15) * blend;
@@ -698,8 +654,8 @@ export class NurburgringTrack {
     const foliageGeom = new THREE.ConeGeometry(3.5, 9, 5);
     foliageGeom.translate(0, 5.5, 0);
 
-    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a2e18, flatShading: true });
-    const foliageMat = new THREE.MeshLambertMaterial({ color: 0x1f4724, flatShading: true });
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x704522, flatShading: true });
+    const foliageMat = new THREE.MeshLambertMaterial({ color: 0x3e7d38, flatShading: true });
 
     const trunkInst = new THREE.InstancedMesh(trunkGeom, trunkMat, treeCount);
     const foliageInst = new THREE.InstancedMesh(foliageGeom, foliageMat, treeCount);

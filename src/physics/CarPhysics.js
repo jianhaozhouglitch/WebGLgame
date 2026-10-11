@@ -53,8 +53,10 @@ export class CarPhysics {
     this.speed = 0; // m/s (forward speed)
     this.lateralSpeed = 0; // m/s (drift sideways speed)
     this.angularVelocity = 0; // rad/s
-    this.steeringAngle = 0; // current wheel turn angle
-    this.maxSteerAngle = 0.24; // ~13.8 degrees (smooth GT racing steering lock)
+    this.steeringAngle = 0; // current front-wheel angle in radians
+    this.maxSteerAngle = 0.58; // 33 degrees at parking/low speed
+    this.highSpeedSteerAngle = 0.32; // 18 degrees at high speed
+    this.steeringRatio = 14.0; // steering wheel turns per front-wheel turn
 
     // Dynamic Accelerations (for G-meter)
     this.longitudinalG = 0;
@@ -175,11 +177,20 @@ export class CarPhysics {
       }
     }
 
-    // 1. Steering Geometry with Speed Sensitivity & Stability
-    // At high speeds, lower steering lock prevents sudden violent destabilization
+    // 1. Variable steering ratio
+    // The rack is quick at low speed for hairpins, then progressively slows
+    // at speed so a large input remains controllable instead of saturating
+    // the old fixed 0.24 rad lock too early.
     const speedKmh = Math.abs(this.speed) * 3.6;
-    const speedFactor = Math.max(0.16, 1.0 / (1.0 + (speedKmh / 50.0) * 0.95));
-    const targetSteerAngle = this.steerInput * this.maxSteerAngle * speedFactor;
+    const speedBlend = Math.min(1.0, speedKmh / 220.0);
+    const smoothBlend = speedBlend * speedBlend * (3.0 - 2.0 * speedBlend);
+    const availableSteerAngle =
+      this.maxSteerAngle + (this.highSpeedSteerAngle - this.maxSteerAngle) * smoothBlend;
+    // Progressive input gives fine control in medium corners while retaining
+    // full lock for tight bends.
+    const progressiveInput = Math.sign(this.steerInput) * Math.pow(Math.abs(this.steerInput), 0.86);
+    const targetSteerAngle = progressiveInput * availableSteerAngle;
+    this.steeringRatio = 14.0 + smoothBlend * 8.0;
     // Smooth steering rack: smooth response on input, snappy return to center
     const steerSpeed = (this.steerInput === 0) ? 14.0 : 6.5;
     this.steeringAngle += (targetSteerAngle - this.steeringAngle) * Math.min(1.0, dt * steerSpeed);
@@ -261,15 +272,17 @@ export class CarPhysics {
     this.speed += forwardAccel * dt;
 
     // Handbrake effect on forward speed
-    if (this.isHandbrakeActive) {
-      this.speed *= Math.max(0.1, 1.0 - dt * 1.5);
+    if (this.isHandbrakeActive && Math.abs(this.speed) > 4) {
+      // The handbrake unlocks the rear axle, but should not simply stop the
+      // car. Retain momentum so the player can rotate through a corner.
+      this.speed *= Math.max(0.1, 1.0 - dt * 0.35);
     }
 
     // 7. Lateral Dynamics, Drifting & Yaw Momentum
     // Lateral tire adhesion
     let tireGrip = 1.0;
     if (this.isHandbrakeActive) {
-      tireGrip = 0.25; // Handbrake cuts rear grip sharply
+      tireGrip = 0.08; // Rear axle loses grip and begins to rotate
     }
 
     // High lateral load causes tire slip
@@ -281,23 +294,34 @@ export class CarPhysics {
     const wheelbase = 2.65; // meters
     let targetAngularVelocity = 0;
     if (Math.abs(this.speed) > 0.2) {
-      targetAngularVelocity = -(this.speed / wheelbase) * Math.sin(this.steeringAngle);
+      targetAngularVelocity = -(this.speed / wheelbase) * Math.tan(this.steeringAngle);
     }
 
     // Oversteer & Drift Dynamics:
     // Only amplify yaw into drift when intentional: Shift key pressed or severe power-oversteer
-    const isDriftIntentional = this.isHandbrakeActive || (slipSpeed > 6.0 && Math.abs(this.steeringAngle) > 0.1 && this.throttle > 0.75);
+    const isDriftIntentional =
+      (this.isHandbrakeActive && Math.abs(this.speed) > 4) ||
+      (slipSpeed > 6.0 && Math.abs(this.steeringAngle) > 0.1 && this.throttle > 0.75);
 
     if (isDriftIntentional) {
       this.isDrifting = true;
-      const driftBoost = this.isHandbrakeActive ? 1.5 : 1.1;
-      this.angularVelocity += targetAngularVelocity * dt * 2.5 * driftBoost;
-      this.angularVelocity *= 0.93; // Rotational damping
+      const driftBoost = this.isHandbrakeActive ? 1.8 : 1.1;
+      const steerDirection = this.steerInput !== 0
+        ? -Math.sign(this.steerInput)
+        : Math.sign(this.angularVelocity || 1);
+      const driftInitiation = this.isHandbrakeActive
+        ? steerDirection * (0.9 + Math.min(1.0, Math.abs(this.speed) / 22) * 1.1)
+        : 0;
+      this.angularVelocity += (targetAngularVelocity * 2.5 * driftBoost + driftInitiation) * dt;
+      this.angularVelocity *= this.isHandbrakeActive ? 0.985 : 0.93;
 
       // Side slide increases
-      const centripetalSlide = -this.angularVelocity * this.speed * 0.35;
-      this.lateralSpeed += (centripetalSlide - this.lateralSpeed * 3.5 * tireGrip) * dt;
-      this.tireSmokeIntensity = Math.min(1.0, (slipSpeed / 7.0) + (this.isHandbrakeActive ? 0.7 : 0.0));
+      const centripetalSlide = -this.angularVelocity * this.speed * 0.45;
+      const handbrakeSlide = this.isHandbrakeActive
+        ? steerDirection * Math.abs(this.speed) * 0.22
+        : 0;
+      this.lateralSpeed += (centripetalSlide + handbrakeSlide - this.lateralSpeed * 3.5 * tireGrip) * dt;
+      this.tireSmokeIntensity = Math.min(1.0, (slipSpeed / 7.0) + (this.isHandbrakeActive ? 0.8 : 0.0));
     } else {
       this.isDrifting = false;
       // High tracking stability during regular cornering (prevents spinning out!)
@@ -358,6 +382,7 @@ export class CarPhysics {
     this.lateralSpeed = 0;
     this.angularVelocity = 0;
     this.steeringAngle = 0;
+    this.steeringRatio = 14.0;
     this.currentGear = 1;
     this.rpm = this.idleRpm;
     this.isDrifting = false;

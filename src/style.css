@@ -422,13 +422,16 @@ html, body {
   color: #ffffff;
 }
 
-/* BOTTOM-RIGHT: INSTRUMENT CLUSTER */
+/* LOWER-RIGHT: HORIZONTAL ONE-LINE INSTRUMENT CLUSTER */
 .hud-bottom-right {
-  align-self: flex-end;
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  z-index: 12;
 }
 
 /* Shift Lights LED Bar */
@@ -472,12 +475,12 @@ html, body {
 /* Instrument Cluster */
 .gauge-cluster {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 12px;
   background: var(--panel-bg);
   border: 2px solid #3d4f68;
   border-radius: 8px;
-  padding: 12px 18px;
+  padding: 8px 14px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
 }
@@ -504,7 +507,7 @@ html, body {
 
 .gear-number {
   font-family: var(--font-pixel);
-  font-size: 48px;
+  font-size: 34px;
   line-height: 1;
   color: var(--neon-green);
   text-shadow: 0 0 12px rgba(0, 255, 102, 0.7);
@@ -520,8 +523,9 @@ html, body {
 /* Speed & RPM container */
 .speed-rpm-container {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
   justify-content: space-between;
 }
 
@@ -533,7 +537,7 @@ html, body {
 
 .speed-number {
   font-family: var(--font-retro-num);
-  font-size: 52px;
+  font-size: 36px;
   line-height: 0.9;
   font-weight: bold;
   color: #ffffff;
@@ -551,12 +555,13 @@ html, body {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  min-width: 420px;
 }
 
 #rpm-canvas {
-  width: 190px;
-  height: 95px;
+  width: 420px;
+  height: 64px;
   display: block;
 }
 
@@ -564,7 +569,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  margin-top: -6px;
+  margin-top: -4px;
   padding: 0 4px;
 }
 
@@ -970,6 +975,14 @@ kbd {
   .hud-bottom-right {
     transform: scale(0.85);
     transform-origin: bottom right;
+    right: 12px;
+    bottom: 12px;
+  }
+  #rpm-canvas {
+    width: 300px;
+  }
+  .rpm-gauge-wrapper {
+    min-width: 300px;
   }
   .keybinds-badge {
     display: none;

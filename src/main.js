@@ -36,6 +36,7 @@ class GameApp {
       KeyD: false,
       ShiftLeft: false,
       ShiftRight: false,
+      Shift: false,
       ArrowUp: false,
       ArrowDown: false
     };
@@ -56,8 +57,8 @@ class GameApp {
   init() {
     // 1. Scene & Atmosphere (Green Hell Eifel Sky & Fog)
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x7da4c2); // Moody sky blue
-    this.scene.fog = new THREE.FogExp2(0x7da4c2, 0.0012);
+    this.scene.background = new THREE.Color(0xb9d9ed); // Bright Eifel daylight
+    this.scene.fog = new THREE.FogExp2(0xb9d9ed, 0.0009);
 
     // 2. Camera
     this.camera = new THREE.PerspectiveCamera(
@@ -79,10 +80,10 @@ class GameApp {
     this.renderer.shadowMap.type = THREE.BasicShadowMap;
 
     // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0xddeeff, 0.65);
+    const ambientLight = new THREE.AmbientLight(0xf1f7ff, 0.9);
     this.scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfff5dd, 1.25);
+    const dirLight = new THREE.DirectionalLight(0xfff8e8, 1.65);
     dirLight.position.set(300, 500, 200);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 1024;
@@ -140,12 +141,22 @@ class GameApp {
 
     // Keyboard inputs
     window.addEventListener('keydown', (e) => {
+      const isShiftKey = e.key === 'Shift' || e.keyCode === 16 ||
+        e.code === 'ShiftLeft' || e.code === 'ShiftRight';
       if (e.code === 'KeyW') this.keys.KeyW = true;
       if (e.code === 'KeyS') this.keys.KeyS = true;
       if (e.code === 'KeyA') this.keys.KeyA = true;
       if (e.code === 'KeyD') this.keys.KeyD = true;
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
-        this.keys.ShiftLeft = true;
+      // Some browsers report the right physical key as the generic "Shift"
+      // code. Use key/location as a fallback and keep one canonical state for
+      // gameplay so both Shift keys always engage the drift.
+      if (isShiftKey) {
+        this.keys.Shift = true;
+        if (e.code === 'ShiftRight' || e.location === 2) {
+          this.keys.ShiftRight = true;
+        } else {
+          this.keys.ShiftLeft = true;
+        }
       }
 
       // Manual Gear Shifting
@@ -175,12 +186,16 @@ class GameApp {
     });
 
     window.addEventListener('keyup', (e) => {
+      const isShiftKey = e.key === 'Shift' || e.keyCode === 16 ||
+        e.code === 'ShiftLeft' || e.code === 'ShiftRight';
       if (e.code === 'KeyW') this.keys.KeyW = false;
       if (e.code === 'KeyS') this.keys.KeyS = false;
       if (e.code === 'KeyA') this.keys.KeyA = false;
       if (e.code === 'KeyD') this.keys.KeyD = false;
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      if (isShiftKey) {
+        this.keys.Shift = false;
         this.keys.ShiftLeft = false;
+        this.keys.ShiftRight = false;
       }
     });
 
@@ -369,7 +384,7 @@ class GameApp {
     let steer = 0.0;
     if (this.keys.KeyA) steer -= 1.0;
     if (this.keys.KeyD) steer += 1.0;
-    const handbrake = this.keys.ShiftLeft || this.keys.ShiftRight;
+    const handbrake = this.keys.Shift || this.keys.ShiftLeft || this.keys.ShiftRight;
 
     // 1. Update Physics
     this.physics.update(dt, {

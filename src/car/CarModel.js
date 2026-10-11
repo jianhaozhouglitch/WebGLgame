@@ -1,6 +1,6 @@
 /**
  * CarModel.js
- * 3D Low-poly sports coupe model with pixel styling, rotating wheels,
+ * 3D Low-poly Porsche 911 Turbo S-inspired model with pixel styling, rotating wheels,
  * responsive steering rack, brake light glow, pixel exhaust flames,
  * tire smoke particles, and skidmark rendering.
  */
@@ -38,9 +38,10 @@ export class CarModel {
   }
 
   buildCar() {
-    // Car Body Palette (Pixel Racing GT style: vibrant racing cyan / teal body with black aero)
+    // Porsche 911 Turbo S-inspired pixel palette: bright guards red body,
+    // dark glass and subtle black aero keep the silhouette readable.
     const bodyMat = new THREE.MeshLambertMaterial({
-      color: 0x00d4ff,
+      color: 0xd71920,
       flatShading: true
     });
     const blackTrimMat = new THREE.MeshLambertMaterial({
@@ -54,10 +55,10 @@ export class CarModel {
       flatShading: true
     });
 
-    // 1. Main Lower Chassis (Width: 1.9m, Length: 4.4m, Height: 0.55m)
+    // 1. Low, wide 911 body with a short front overhang and long rear deck.
     const chassisGeom = new THREE.BoxGeometry(1.9, 0.45, 4.3);
     const chassis = new THREE.Mesh(chassisGeom, bodyMat);
-    chassis.position.y = 0.45;
+    chassis.position.y = 0.42;
     chassis.castShadow = true;
     chassis.receiveShadow = true;
     this.carGroup.add(chassis);
@@ -65,43 +66,51 @@ export class CarModel {
     // Front Bumper & Splitter
     const splitterGeom = new THREE.BoxGeometry(1.95, 0.12, 0.7);
     const splitter = new THREE.Mesh(splitterGeom, blackTrimMat);
-    splitter.position.set(0, 0.22, 2.15);
+    splitter.position.set(0, 0.2, 2.14);
     this.carGroup.add(splitter);
 
     // Front Hood Slope
-    const hoodGeom = new THREE.BoxGeometry(1.8, 0.25, 1.4);
+    const hoodGeom = new THREE.BoxGeometry(1.62, 0.2, 1.55);
     const hood = new THREE.Mesh(hoodGeom, bodyMat);
-    hood.position.set(0, 0.7, 1.25);
-    hood.rotation.x = -0.12;
+    hood.position.set(0, 0.68, 1.3);
+    hood.rotation.x = -0.16;
     this.carGroup.add(hood);
 
     // Cabin / Cockpit Roof
-    const cabinGeom = new THREE.BoxGeometry(1.5, 0.52, 1.9);
+    const cabinGeom = new THREE.BoxGeometry(1.48, 0.58, 1.72);
     const cabin = new THREE.Mesh(cabinGeom, glassMat);
-    cabin.position.set(0, 0.95, -0.3);
+    cabin.position.set(0, 0.98, -0.18);
+    cabin.rotation.x = -0.08;
     this.carGroup.add(cabin);
 
     // Roof Top
-    const roofGeom = new THREE.BoxGeometry(1.4, 0.08, 1.3);
+    const roofGeom = new THREE.BoxGeometry(1.34, 0.08, 1.22);
     const roof = new THREE.Mesh(roofGeom, bodyMat);
-    roof.position.set(0, 1.23, -0.35);
+    roof.position.set(0, 1.28, -0.18);
     this.carGroup.add(roof);
 
     // Rear Trunk / Deck
-    const trunkGeom = new THREE.BoxGeometry(1.8, 0.35, 1.2);
+    const trunkGeom = new THREE.BoxGeometry(1.9, 0.34, 1.32);
     const trunk = new THREE.Mesh(trunkGeom, bodyMat);
-    trunk.position.set(0, 0.65, -1.55);
+    trunk.position.set(0, 0.67, -1.5);
     this.carGroup.add(trunk);
 
-    // Rear GT Racing Wing / Spoiler
-    const wingMat = new THREE.MeshLambertMaterial({ color: 0x111622, flatShading: true });
-    const wingBlade = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.08, 0.4), wingMat);
-    wingBlade.position.set(0, 1.25, -2.05);
+    // Wide rear haunches and the characteristic 911 ducktail spoiler.
+    const rearHaunchGeom = new THREE.BoxGeometry(0.34, 0.35, 1.25);
+    for (const side of [-1, 1]) {
+      const haunch = new THREE.Mesh(rearHaunchGeom, bodyMat);
+      haunch.position.set(side * 0.88, 0.62, -1.38);
+      this.carGroup.add(haunch);
+    }
 
-    const wingPostL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.2), wingMat);
-    wingPostL.position.set(-0.65, 1.0, -2.05);
-    const wingPostR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.2), wingMat);
-    wingPostR.position.set(0.65, 1.0, -2.05);
+    const wingMat = new THREE.MeshLambertMaterial({ color: 0x111622, flatShading: true });
+    const wingBlade = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.1, 0.28), bodyMat);
+    wingBlade.position.set(0, 0.98, -2.05);
+
+    const wingPostL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.14), wingMat);
+    wingPostL.position.set(-0.6, 0.86, -2.05);
+    const wingPostR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.14), wingMat);
+    wingPostR.position.set(0.6, 0.86, -2.05);
 
     this.carGroup.add(wingBlade);
     this.carGroup.add(wingPostL);
@@ -109,7 +118,7 @@ export class CarModel {
 
     // Headlights (Front Pixel LED clusters)
     const headlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const hlGeom = new THREE.BoxGeometry(0.35, 0.15, 0.1);
+    const hlGeom = new THREE.BoxGeometry(0.38, 0.12, 0.1);
     const hlLeft = new THREE.Mesh(hlGeom, headlightMat);
     hlLeft.position.set(-0.7, 0.55, 2.16);
     const hlRight = new THREE.Mesh(hlGeom, headlightMat);
@@ -128,25 +137,24 @@ export class CarModel {
 
     // Brake Lights (Rear Red LED bar)
     this.brakeLightMat = new THREE.MeshBasicMaterial({ color: 0x660000 });
-    const blGeom = new THREE.BoxGeometry(0.4, 0.14, 0.08);
+    const blGeom = new THREE.BoxGeometry(0.58, 0.12, 0.08);
     const blLeft = new THREE.Mesh(blGeom, this.brakeLightMat);
-    blLeft.position.set(-0.68, 0.6, -2.16);
+    blLeft.position.set(-0.38, 0.68, -2.16);
     const blRight = new THREE.Mesh(blGeom, this.brakeLightMat);
-    blRight.position.set(0.68, 0.6, -2.16);
+    blRight.position.set(0.38, 0.68, -2.16);
     this.carGroup.add(blLeft);
     this.carGroup.add(blRight);
 
-    // Dual Exhaust Pipes
+    // Quad exhaust outlets, a Turbo S signature.
     const exhaustMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, metalness: 0.9 });
     const exhaustGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8);
     exhaustGeom.rotateX(Math.PI / 2);
 
-    const exhL = new THREE.Mesh(exhaustGeom, exhaustMat);
-    exhL.position.set(-0.4, 0.3, -2.2);
-    const exhR = new THREE.Mesh(exhaustGeom, exhaustMat);
-    exhR.position.set(0.4, 0.3, -2.2);
-    this.carGroup.add(exhL);
-    this.carGroup.add(exhR);
+    for (const x of [-0.52, -0.18, 0.18, 0.52]) {
+      const exhaust = new THREE.Mesh(exhaustGeom, exhaustMat);
+      exhaust.position.set(x, 0.3, -2.2);
+      this.carGroup.add(exhaust);
+    }
 
     // Exhaust Flames (hidden until redline/shift)
     const flameMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff }); // Turbo blue/cyan pixel flame!
@@ -154,10 +162,10 @@ export class CarModel {
     flameGeom.rotateX(-Math.PI / 2);
 
     const flameL = new THREE.Mesh(flameGeom, flameMat);
-    flameL.position.set(-0.4, 0.3, -2.6);
+    flameL.position.set(-0.38, 0.3, -2.6);
     flameL.visible = false;
     const flameR = new THREE.Mesh(flameGeom, flameMat);
-    flameR.position.set(0.4, 0.3, -2.6);
+    flameR.position.set(0.38, 0.3, -2.6);
     flameR.visible = false;
 
     this.carGroup.add(flameL);
@@ -166,19 +174,19 @@ export class CarModel {
 
     // 2. Wheels Assembly
     this.wheelFL = this.createWheel();
-    this.wheelFL.position.set(-0.95, 0.33, 1.4);
+    this.wheelFL.position.set(-0.95, 0.33, 1.42);
     this.carGroup.add(this.wheelFL);
 
     this.wheelFR = this.createWheel();
-    this.wheelFR.position.set(0.95, 0.33, 1.4);
+    this.wheelFR.position.set(0.95, 0.33, 1.42);
     this.carGroup.add(this.wheelFR);
 
     this.wheelRL = this.createWheel();
-    this.wheelRL.position.set(-0.95, 0.33, -1.4);
+    this.wheelRL.position.set(-0.95, 0.33, -1.42);
     this.carGroup.add(this.wheelRL);
 
     this.wheelRR = this.createWheel();
-    this.wheelRR.position.set(0.95, 0.33, -1.4);
+    this.wheelRR.position.set(0.95, 0.33, -1.42);
     this.carGroup.add(this.wheelRR);
 
     this.scene.add(this.carGroup);
@@ -200,10 +208,10 @@ export class CarModel {
     const tire = new THREE.Mesh(tireGeom, tireMat);
     wheelGroup.add(tire);
 
-    // Golden racing rim
+    // Bright silver Turbo S-style rim
     const rimGeom = new THREE.CylinderGeometry(0.22, 0.22, 0.29, 8);
     rimGeom.rotateZ(Math.PI / 2);
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0xcc9933, metalness: 0.8, roughness: 0.2 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xdce6ef, metalness: 0.8, roughness: 0.2 });
     const rim = new THREE.Mesh(rimGeom, rimMat);
     wheelGroup.add(rim);
 

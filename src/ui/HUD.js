@@ -2,7 +2,7 @@
  * HUD.js
  * Comprehensive arcade instrument cluster and HUD overlay manager:
  * - Real-time Nürburgring track minimap with animated player arrow
- * - Canvas RPM arc tachometer with shift LEDs
+ * - Horizontal Canvas RPM tachometer with shift LEDs
  * - Giant gear number & digital speedometer
  * - G-Force meter & Drift combo counter
  * - Sector progress & Lap timing
@@ -203,7 +203,7 @@ export class HUD {
   }
 
   /**
-   * Draw Analog Tachometer Arc on 2D Canvas
+   * Draw the horizontal one-line tachometer used by the lower-left cluster.
    */
   drawRPMGauge(rpm, redline) {
     if (!this.rpmCtx) return;
@@ -212,73 +212,52 @@ export class HUD {
     const h = this.rpmCanvas.height;
 
     ctx.clearRect(0, 0, w, h);
-
-    const centerX = w / 2;
-    const centerY = h - 10;
-    const radius = 75;
-
-    // Gauge Arc angles: from Math.PI to 2 * Math.PI
-    const startAngle = Math.PI * 0.85;
-    const endAngle = Math.PI * 2.15;
-    const totalArc = endAngle - startAngle;
-
-    // Background track arc
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#182333';
-    ctx.stroke();
-
-    // Colored Segments
     const gaugeMaxRpm = redline;
-    // 1. Green (0 - 6500)
-    const a1 = startAngle + totalArc * (6500 / gaugeMaxRpm);
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, startAngle, a1);
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#00ff66';
-    ctx.stroke();
-
-    // 2. Yellow (6500 - 8200)
-    const a2 = startAngle + totalArc * (8200 / gaugeMaxRpm);
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, a1, a2);
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#ffcc00';
-    ctx.stroke();
-
-    // 3. Red (8200 - 10000)
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, a2, endAngle);
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#ff3344';
-    ctx.stroke();
-
-    // RPM Needle
     const clampedRpm = Math.max(0, Math.min(gaugeMaxRpm, rpm));
-    const needleAngle = startAngle + totalArc * (clampedRpm / gaugeMaxRpm);
+    const left = 12;
+    const top = 24;
+    const barWidth = w - 24;
+    const barHeight = 13;
+    const segmentCount = 32;
+    const segmentGap = 3;
+    const segmentWidth = (barWidth - segmentGap * (segmentCount - 1)) / segmentCount;
 
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.rotate(needleAngle);
+    ctx.fillStyle = '#182333';
+    ctx.fillRect(left, top, barWidth, barHeight);
 
-    // Needle shadow
-    ctx.fillStyle = '#ff3344';
-    ctx.shadowColor = '#ff3344';
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.moveTo(0, -3);
-    ctx.lineTo(radius + 6, 0);
-    ctx.lineTo(0, 3);
-    ctx.closePath();
-    ctx.fill();
+    for (let i = 0; i < segmentCount; i++) {
+      const fraction = (i + 0.5) / segmentCount;
+      const x = left + i * (segmentWidth + segmentGap);
+      const color = fraction < 0.65 ? '#00ff66' : fraction < 0.82 ? '#ffcc00' : '#ff3344';
+      const active = fraction <= clampedRpm / gaugeMaxRpm;
+      ctx.fillStyle = active ? color : '#263448';
+      ctx.fillRect(x, top, segmentWidth, barHeight);
+    }
 
-    // Pivot cap
+    const markerX = left + (clampedRpm / gaugeMaxRpm) * barWidth;
     ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(0, 0, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(markerX - 1, top - 5, 2, barHeight + 10);
+    ctx.shadowBlur = 0;
+
+    ctx.font = '11px monospace';
+    ctx.fillStyle = '#9ab0c8';
+    ctx.textAlign = 'left';
+    ctx.fillText('RPM', left, 14);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${Math.round(clampedRpm)} / ${gaugeMaxRpm}`, w - left, 14);
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#00ff66';
+    ctx.fillText('0', left, h - 4);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillText('6500', left + barWidth * 0.65, h - 4);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff3344';
+    ctx.fillText('10000 REDLINE', w - left, h - 4);
   }
 
   /**
