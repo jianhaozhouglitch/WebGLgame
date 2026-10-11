@@ -113,8 +113,8 @@ export class HUD {
     this.driftBar.style.width = physics.isHandbrakeActive ? '100%' : '0%';
 
     // 3. Shift Lights (9 LEDs)
-    // Redline: 8500, Safe: 0-6000, Mid: 6000-7400, Shift: > 7500
-    const rpmFrac = Math.max(0, Math.min(1, (physics.rpm - 2500) / (8500 - 2500)));
+    // LFA-inspired 10,000 RPM redline: progressive shift lights from 2,500 RPM.
+    const rpmFrac = Math.max(0, Math.min(1, (physics.rpm - 2500) / (10000 - 2500)));
     const activeLedsCount = Math.floor(rpmFrac * this.shiftLeds.length);
     this.shiftLeds.forEach((led, idx) => {
       if (idx < activeLedsCount) {
@@ -125,7 +125,7 @@ export class HUD {
     });
 
     // 4. Shift Alerts
-    if (physics.rpm > 7700 && physics.currentGear < 6 && physics.currentGear > 0 && physics.throttle > 0.5) {
+    if (physics.rpm > 9000 && physics.currentGear < 6 && physics.currentGear > 0 && physics.throttle > 0.5) {
       this.shiftAlert.classList.remove('hidden');
     } else {
       this.shiftAlert.classList.add('hidden');
@@ -230,23 +230,24 @@ export class HUD {
     ctx.stroke();
 
     // Colored Segments
-    // 1. Green (0 - 6000)
-    const a1 = startAngle + totalArc * (6000 / 9000);
+    const gaugeMaxRpm = redline;
+    // 1. Green (0 - 6500)
+    const a1 = startAngle + totalArc * (6500 / gaugeMaxRpm);
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, startAngle, a1);
     ctx.lineWidth = 10;
     ctx.strokeStyle = '#00ff66';
     ctx.stroke();
 
-    // 2. Yellow (6000 - 7500)
-    const a2 = startAngle + totalArc * (7500 / 9000);
+    // 2. Yellow (6500 - 8200)
+    const a2 = startAngle + totalArc * (8200 / gaugeMaxRpm);
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, a1, a2);
     ctx.lineWidth = 10;
     ctx.strokeStyle = '#ffcc00';
     ctx.stroke();
 
-    // 3. Red (7500 - 9000)
+    // 3. Red (8200 - 10000)
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, a2, endAngle);
     ctx.lineWidth = 10;
@@ -254,8 +255,8 @@ export class HUD {
     ctx.stroke();
 
     // RPM Needle
-    const clampedRpm = Math.max(0, Math.min(9000, rpm));
-    const needleAngle = startAngle + totalArc * (clampedRpm / 9000);
+    const clampedRpm = Math.max(0, Math.min(gaugeMaxRpm, rpm));
+    const needleAngle = startAngle + totalArc * (clampedRpm / gaugeMaxRpm);
 
     ctx.save();
     ctx.translate(centerX, centerY);

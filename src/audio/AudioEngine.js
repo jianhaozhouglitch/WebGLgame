@@ -1,6 +1,6 @@
 /**
  * AudioEngine.js
- * Procedural Web Audio API sound synthesizer for realistic car engine harmonics,
+ * Procedural Web Audio API sound synthesizer for an LFA-inspired V10 engine,
  * turbo blow-off valve, rev limiter pops, drift tire squeal, and wind rush.
  */
 
@@ -18,8 +18,8 @@ export class AudioEngine {
     this.windGain = null;
 
     // Engine Oscillators & Filter
-    this.osc1 = null; // Sub-bass rumble
-    this.osc2 = null; // Main firing frequency (cylinder strokes)
+    this.osc1 = null; // V10 fundamental rumble
+    this.osc2 = null; // V10 firing pulse
     this.osc3 = null; // High-rpm exhaust resonance
     this.engineFilter = null;
 
@@ -57,23 +57,24 @@ export class AudioEngine {
       this.engineFilter.frequency.setValueAtTime(400, this.ctx.currentTime);
       this.engineFilter.Q.setValueAtTime(2.5, this.ctx.currentTime);
 
-      // Osc 1: Sub bass (sawtooth)
+      // A V10 needs a higher firing frequency and a brighter harmonic stack
+      // than the previous low-rev six-cylinder approximation.
       this.osc1 = this.ctx.createOscillator();
       this.osc1.type = 'sawtooth';
-      this.osc1.frequency.setValueAtTime(25, this.ctx.currentTime);
+      this.osc1.frequency.setValueAtTime(30, this.ctx.currentTime);
 
-      // Osc 2: Cylinder combustion pulses (triangle)
+      // Combustion pulse with a sharp triangle edge for the LFA-like scream.
       this.osc2 = this.ctx.createOscillator();
-      this.osc2.type = 'triangle';
-      this.osc2.frequency.setValueAtTime(50, this.ctx.currentTime);
+      this.osc2.type = 'square';
+      this.osc2.frequency.setValueAtTime(75, this.ctx.currentTime);
 
-      // Osc 3: Exhaust rasp (square with lower gain)
+      // High harmonic adds the characteristic metallic top-end at high rpm.
       this.osc3 = this.ctx.createOscillator();
       this.osc3.type = 'sawtooth';
-      this.osc3.frequency.setValueAtTime(75, this.ctx.currentTime);
+      this.osc3.frequency.setValueAtTime(150, this.ctx.currentTime);
 
       const osc3Gain = this.ctx.createGain();
-      osc3Gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+      osc3Gain.gain.setValueAtTime(0.28, this.ctx.currentTime);
       this.osc3.connect(osc3Gain);
 
       this.osc1.connect(this.engineFilter);
@@ -160,7 +161,7 @@ export class AudioEngine {
 
   /**
    * Update engine sound parameters in real-time
-   * @param {number} rpm - 900 to 8600
+   * @param {number} rpm - 900 to 10200
    * @param {number} throttle - 0 to 1
    * @param {number} speedKmh - 0 to 320
    * @param {number} driftSlip - 0 to 1 (lateral slip)
@@ -175,23 +176,22 @@ export class AudioEngine {
 
     const now = this.ctx.currentTime;
 
-    // 6-Cylinder Firing frequency formula: F = (RPM / 60) * (Cylinders / 2)
-    // For 6-cyl: F = (RPM / 60) * 3 = RPM / 20.
-    // e.g. 900 RPM -> 45 Hz base firing pulse
-    // e.g. 8000 RPM -> 400 Hz firing pulse
-    const baseFreq = Math.max(25, rpm / 22);
+    // Four-stroke V10 firing frequency: (RPM / 60) * (10 / 2) = RPM / 12.
+    // The upper harmonics make the sound rise into the LFA's distinctive
+    // metallic scream instead of only making the engine louder.
+    const baseFreq = Math.max(30, rpm / 12);
 
     this.osc1.frequency.setTargetAtTime(baseFreq * 0.5, now, 0.03);
     this.osc2.frequency.setTargetAtTime(baseFreq, now, 0.03);
-    this.osc3.frequency.setTargetAtTime(baseFreq * 2.0, now, 0.03);
+    this.osc3.frequency.setTargetAtTime(baseFreq * 3.0, now, 0.03);
 
     // Filter frequency opens up with throttle and rpm
-    // Idle closed (350Hz) -> Wide Open Throttle high-rev (3800Hz)
-    const targetFilterCutoff = 350 + (throttle * 1800) + (rpm / 8500) * 2200;
+    // Idle is restrained; full throttle opens into a bright 10,000 rpm scream.
+    const targetFilterCutoff = 420 + (throttle * 2200) + (rpm / 10000) * 3000;
     this.engineFilter.frequency.setTargetAtTime(targetFilterCutoff, now, 0.04);
 
     // Engine volume: idle purr -> full roar
-    let targetEngineVol = 0.25 + throttle * 0.45 + (rpm / 8500) * 0.3;
+    let targetEngineVol = 0.22 + throttle * 0.42 + (rpm / 10000) * 0.36;
     if (isRevLimiting) {
       // Rapid stutter on redline limiter
       targetEngineVol = Math.random() > 0.5 ? 0.8 : 0.2;

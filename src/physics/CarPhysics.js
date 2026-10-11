@@ -34,8 +34,9 @@ export class CarPhysics {
 
     // Engine Limits
     this.idleRpm = 900;
-    this.redlineRpm = 8500;
-    this.maxRpm = 8650;
+    // Lexus LFA-inspired high-revving V10 character.
+    this.redlineRpm = 10000;
+    this.maxRpm = 10200;
     this.rpm = 900;
     this.isRevLimiting = false;
     this.revLimitTimer = 0;
@@ -86,16 +87,12 @@ export class CarPhysics {
     if (rpm < 600) return 150;
     if (rpm > this.maxRpm) return 0;
 
-    // Realistic GT power band:
-    // Low end (900-2500): 220-350 Nm
-    // Mid range (2500-5000): 350-450 Nm
-    // Peak power band (5200-7200): 480 Nm peak!
-    // High rev taper (7200-8500): 480 -> 390 Nm
-    const norm = (rpm - 900) / (8500 - 900);
+    // Broad V10 power band with a strong high-rpm pull.
+    const norm = (rpm - 900) / (10000 - 900);
     const clamped = Math.max(0, Math.min(1, norm));
     
     // Asymmetric torque dome
-    const peakNorm = 0.65; // Peak around 5800 RPM
+    const peakNorm = 0.68; // Peak around 7100 RPM
     let factor = 0;
     if (clamped < peakNorm) {
       factor = Math.sin((clamped / peakNorm) * (Math.PI / 2));
@@ -194,7 +191,7 @@ export class CarPhysics {
     if (this.currentGear === 0 || !this.isClutchEngaged) {
       // Neutral or Clutch disengaged: engine revs with throttle & flywheel inertia
       if (this.throttle > 0.05) {
-        this.rpm += (this.throttle * 9000 - (this.rpm - this.idleRpm) * 0.5) * dt * 4;
+        this.rpm += (this.throttle * 10000 - (this.rpm - this.idleRpm) * 0.5) * dt * 4;
       } else {
         this.rpm -= (this.rpm - this.idleRpm) * dt * 5;
       }
