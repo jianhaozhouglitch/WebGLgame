@@ -187,8 +187,21 @@ class GameApp {
     // Start Button
     const btnStart = document.getElementById('btn-start-game');
     if (btnStart) {
-      btnStart.addEventListener('click', () => {
+      const startFromOverlay = (event) => {
+        event.preventDefault();
         this.startGame();
+      };
+      btnStart.addEventListener('click', startFromOverlay);
+      btnStart.addEventListener('pointerup', startFromOverlay);
+    }
+    const startOverlay = document.getElementById('start-overlay');
+    if (startOverlay) {
+      // Keep the start screen usable on touch devices and browsers that do
+      // not synthesize a click after a pointer interaction.
+      startOverlay.addEventListener('pointerup', (event) => {
+        if (event.target === startOverlay) {
+          this.startGame();
+        }
       });
     }
 
